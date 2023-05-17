@@ -1,9 +1,34 @@
 import express from "express";
+import cookieParser from "cookie-parser";
+import cors from "cors"
+import helmet from "helmet"
 import logger from "./utils/logger";
-const PORT = process.env.PORT || 4000
-const app = express()
+import { connectToDatabase, disconnectFromDatabase } from "./utils/database";
+import { CORS_ORIGIN } from "./constants";
+import userRoute from "./modules/user/user.route";
 
-const server = app.listen(PORT, () => {
+const PORT = process.env.PORT || 4000
+
+const app = express()
+///////////////////////// express middleware ////////////////////////////
+app.use(cookieParser())
+app.use(express.json())
+app.use(cors({
+    origin: CORS_ORIGIN,
+    credentials: true
+}))
+app.use(helmet())
+
+
+//////////////////////////// ROUTES ////////////////////////////////////
+app.use("/api/users", userRoute)
+
+
+
+//////////////////////////// SERVER  //////////////////////////////////
+
+const server = app.listen(PORT, async () => {
+    await connectToDatabase()
     logger.info(`Server is running on http://localhost:${PORT}`);
 })
 
@@ -13,6 +38,7 @@ function gracefulShutdown(signal: string) {
         logger.info("goodbye, got signal");
         server.close();
         //db disconnect
+        await disconnectFromDatabase()
         logger.info("my work here is done")
         process.exit
     })
